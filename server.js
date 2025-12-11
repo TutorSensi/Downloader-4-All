@@ -1,65 +1,44 @@
 const express = require("express");
 const cors = require("cors");
-const fetch = global.fetch || require("node-fetch");
+const fetch = require("node-fetch");
+const path = require("path");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public"));
 
-// Root
+// Serve frontend
+app.use(express.static(path.join(__dirname, "public")));
+
 app.get("/", (req, res) => {
-  res.sendFile(require("path").join(__dirname, "public", "index.html"));
+  res.sendFile(path.join(__dirname, "public/index.html"));
 });
 
-/**
- * GET /api/info?url=<YOUTUBE_URL>
- * Returns JSON info from yt-api.org
- */
+// Get Video Info
 app.get("/api/info", async (req, res) => {
-  try {
-    const url = req.query.url;
-    if (!url) return res.status(400).json({ error: "You must provide ?url=" });
+    const videoURL = req.query.url;
+    if (!videoURL) return res.json({ error: "No URL provided" });
 
-    const apiURL = `https://yt-api.org/api/info?url=${encodeURIComponent(url)}`;
-    const r = await fetch(apiURL, { method: "GET" });
-    if (!r.ok) {
-      const text = await r.text();
-      return res.status(502).json({ error: "Upstream error", status: r.status, body: text });
+    try {
+        const apiURL = `https://api.vevioz.com/api/button/info?url=${encodeURIComponent(videoURL)}`;
+        const fetchRes = await fetch(apiURL);
+        const text = await fetchRes.text(); // HTML response
+
+        res.send(text); // Directly send HTML to frontend
+    } catch (err) {
+        res.json({ error: err.message });
     }
-    const data = await r.json();
-    return res.json(data);
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
 });
 
-/**
- * GET /api/download?url=<YOUTUBE_URL>&type=mp4
- * This proxies a simple downloader button HTML (or direct link) from yt-api.org.
- * We return the upstream body (HTML or redirect) so frontend can use it.
- */
+// Download (MP4/MP3)
 app.get("/api/download", async (req, res) => {
-  try {
     const url = req.query.url;
-    const type = req.query.type || "mp4"; // mp4 or mp3 or button
-    if (!url) return res.status(400).json({ error: "You must provide ?url=" });
+    const type = req.query.type || "mp4";
 
-    // Examples on yt-api.org:
-    // /api/button/mp4?url=...
-    // /api/button/mp3?url=...
-    // or other endpoints — we use button endpoints for a simple result
-    const apiURL = `https://yt-api.org/api/button/${encodeURIComponent(type)}?url=${encodeURIComponent(url)}`;
-    const r = await fetch(apiURL, { method: "GET" });
-    const body = await r.text();
+    const apiURL = `https://api.vevioz.com/api/button/${type}?url=${encodeURIComponent(url)}`;
 
-    // If upstream returned HTML with a direct link, respond with HTML
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    return res.send(body);
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
+    res.redirect(apiURL);
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log("API running on port " + PORT));
