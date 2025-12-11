@@ -10,11 +10,11 @@
     .row{display:flex;gap:8px}
     .small{width:140px}
     .card{border:1px solid #ddd;padding:12px;border-radius:8px;margin-top:12px}
-    a.button{display:inline-block;padding:6px 10px;border-radius:6px;border:1px solid #444;text-decoration:none}
     pre{white-space:pre-wrap;background:#f7f7f7;padding:8px;border-radius:6px}
   </style>
 </head>
 <body>
+
   <h2>Downloader4All — YouTube (Quick)</h2>
   <p>Paste YouTube link and press <b>Get Info</b>.</p>
 
@@ -32,26 +32,22 @@
   <script>
     const infoBtn = document.getElementById('infoBtn');
     const urlInput = document.getElementById('url');
-    const result = document.getElementById('result');
     const typeSelect = document.getElementById('type');
+    const result = document.getElementById('result');
 
     infoBtn.addEventListener('click', async () => {
       const url = urlInput.value.trim();
-      if(!url){ alert('Paste a YouTube URL'); return; }
-      result.innerHTML = '<div class="card">Loading info…</div>';
+      if(!url){ alert('Paste a YouTube URL!'); return; }
+
+      result.innerHTML = '<div class="card">Loading info...</div>';
+
       try {
-        const r = await fetch(`/api/info?url=${encodeURIComponent(url)}`);
-        const j = await r.json();
-        if(j.error){ result.innerHTML = `<div class="card">Error: ${j.error}</div>`; return; }
-
-        const thumb = j.thumbnail ? `<img src="${j.thumbnail}" style="max-width:240px;border-radius:8px"/>` : '';
-        let html = `<div class="card"><h3>${j.title}</h3><div>${thumb}</div>`;
-        html += `<p><b>Channel:</b> ${j.author || ''}</p>`;
-        html += `<a class="button" href="/api/download?url=${encodeURIComponent(url)}&type=${encodeURIComponent(typeSelect.value)}" target="_blank">Download</a>`;
-        html += `</div>`;
-        result.innerHTML = html;
-
-      } catch (err) {
+        const res = await fetch(`/api/info?url=${encodeURIComponent(url)}`);
+        const html = await res.text(); // HTML, not JSON
+        result.innerHTML = html + 
+         `<br><a href="/api/download?url=${encodeURIComponent(url)}&type=${typeSelect.value}" target="_blank">Download (${typeSelect.value.toUpperCase()})</a>`;
+      }
+      catch(err){
         result.innerHTML = `<div class="card">Error: ${err.message}</div>`;
       }
     });
